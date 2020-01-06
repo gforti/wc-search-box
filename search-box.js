@@ -1,21 +1,21 @@
 window.customElements.define('search-box', class extends HTMLElement {
 
-    constructor() {
-      super()
-      this.checkBind = this.check.bind(this)
-      this.finishBind = this.finish.bind(this)
-      this.selectionBind = this.selection.bind(this)
-      this.searchSelectedBind = this.searchSelected.bind(this)
-      this.searches = []
-      this.KEY_CODE = {
-        DOWN: 40,
-        ENTER: 13,
-        UP: 38,
-      }
+  constructor() {
+    super()
+    this.checkBind = this.check.bind(this)
+    this.finishBind = this.finish.bind(this)
+    this.selectionBind = this.selection.bind(this)
+    this.searchSelectedBind = this.searchSelected.bind(this)
+    this.searches = []
+    this.KEY_CODE = {
+      DOWN: 40,
+      ENTER: 13,
+      UP: 38,
     }
-  
-    generateTemplate() {
-      return `
+  }
+
+  generateTemplate() {
+    return `
         <style>
           search-box .search-box-icon {
             cursor: pointer;
@@ -86,114 +86,114 @@ window.customElements.define('search-box', class extends HTMLElement {
           <virtual-list></virtual-list>
         </div>
       `
-    }
-  
-    connectedCallback() {
-      this.innerHTML = this.generateTemplate()
-      this.search = this.querySelector('input')
-      this.list = this.querySelector('div.search-box-list')
-      this.searchIcon = this.querySelector('.search-box-icon')
-      this.virtualList = this.list.querySelector('virtual-list')
-  
-      this.virtualList.addEventListener('v-item-selected', (evt) => {
-        this.search.value = this.removeHTML(evt.detail.itemValue)
-      })
-  
-      this.search.addEventListener('focus', this.checkBind)
-      this.search.addEventListener('input', this.checkBind)
-      this.search.addEventListener('keydown', this.selectionBind)
-      this.search.addEventListener('blur', this.finishBind)
-      this.searchIcon.addEventListener('click', this.searchSelectedBind)
+  }
+
+  connectedCallback() {
+    this.innerHTML = this.generateTemplate()
+    this.search = this.querySelector('input')
+    this.list = this.querySelector('div.search-box-list')
+    this.searchIcon = this.querySelector('.search-box-icon')
+    this.virtualList = this.list.querySelector('virtual-list')
+
+    this.virtualList.addEventListener('v-item-selected', (evt) => {
+      this.search.value = this.removeHTML(evt.detail.itemValue)
+    })
+
+    this.search.addEventListener('focus', this.checkBind)
+    this.search.addEventListener('input', this.checkBind)
+    this.search.addEventListener('keydown', this.selectionBind)
+    this.search.addEventListener('blur', this.finishBind)
+    this.searchIcon.addEventListener('click', this.searchSelectedBind)
+    this.render()
+  }
+
+  disconnectedCallback() {
+    this.search.removeEventListener('focus', this.checkBind)
+    this.search.removeEventListener('input', this.checkBind)
+    this.search.removeEventListener('keydown', this.selectionBind)
+    this.search.removeEventListener('blur', this.finishBind)
+    this.searchIcon.removeEventListener('click', this.searchSelectedBind)
+  }
+
+  static get observedAttributes() {
+    return ['data-placeholder']
+  }
+
+  attributeChangedCallback(attr, oldValue, newValue) {
+    if (oldValue !== newValue) {
       this.render()
     }
-  
-    disconnectedCallback() {
-      this.search.removeEventListener('focus', this.checkBind)
-      this.search.removeEventListener('input', this.checkBind)
-      this.search.removeEventListener('keydown', this.selectionBind)
-      this.search.removeEventListener('blur', this.finishBind)
-      this.searchIcon.removeEventListener('click', this.searchSelectedBind)
+  }
+
+  render() {
+    if (!this.search) return
+    this.search.setAttribute('placeholder', this.dataset.placeholder || 'Search..')
+  }
+
+  setSearchList(searches) {
+    if (Array.isArray(searches)) {
+      this.searches = [...new Set(searches).values()]
+      this.virtualList.render({
+        displayAmt: 5,
+        listItems: this.searches,
+        tag: 'search-row'
+      })
     }
-  
-    static get observedAttributes() {
-      return ['data-placeholder']
-    }
-  
-    attributeChangedCallback(attr, oldValue, newValue) {
-      if (oldValue !== newValue) {
-        this.render()
-      }
-    }
-  
-    render() {
-      if (!this.search) return
-      this.search.setAttribute('placeholder', this.dataset.placeholder || 'Search..')
-    }
-  
-    setSearchList(searches) {
-      if (Array.isArray(searches)) {
-        this.searches = [...new Set(searches).values()]
-        this.virtualList.render({
-            displayAmt: 5,
-            listItems: this.searches,
-            tag: 'search-row'
+  }
+
+  async check(event) {
+    if (Object.values(this.KEY_CODE).indexOf(event.keyCode) > -1) return
+    let list = this.searches
+    const find = this.search.value
+    if (this.search.value.length) {
+      list = list.filter(search => search.toUpperCase().includes(find.toUpperCase()) && search.toUpperCase() !== find.toUpperCase()).map((search) => {
+        const findRE = new RegExp(find, 'i')
+        return search.replace(findRE, function (x) {
+          return `<strong>${x}</strong>`
         })
-      }
-    }
-  
-    async check(event) {
-      if (Object.values(this.KEY_CODE).indexOf(event.keyCode) > -1) return
-      let list = this.searches
-      const find = this.search.value
-      if (this.search.value.length) {
-        list = list.filter(search => search.toUpperCase().includes(find.toUpperCase()) && search.toUpperCase() !== find.toUpperCase()).map((search) => {
-          const findRE = new RegExp(find, 'i')
-          return search.replace(findRE, function (x) {
-            return `<strong>${x}</strong>`
-          })
-        })
-      }
-  
-      if (list.length) {
-        this.list.classList.add('show-search-box')
-        await this.virtualList.render({
-            displayAmt: 5,
-            listItems: list,
-            tag: 'search-row'
-        })
-      } else {
-        this.list.classList.remove('show-search-box')
-      }
-    }
-  
-    selection(event) {
-      if (Object.values(this.KEY_CODE).indexOf(event.keyCode) === -1) return
-      if (event.keyCode === this.KEY_CODE.ENTER) {
-        this.virtualList.triggerSelected()
-        this.searchSelected()
-      }
-      if (event.keyCode === this.KEY_CODE.DOWN) {
-        this.virtualList.vItemDown()
-      }
-      if (event.keyCode === this.KEY_CODE.UP) {
-        this.virtualList.vItemUp()
-      }
-    }
-  
-    searchSelected() {
-      this.dispatchEvent(new CustomEvent('search-selected', { detail: this.search.value }))
-    }
-  
-    finish() {
-      setTimeout(() => {
-        this.list.classList.remove('show-search-box')
-      }, 200)
+      })
     }
 
-    removeHTML(input) {
-        const doc = new DOMParser().parseFromString(input, 'text/html')
-        const docEnsure = new DOMParser().parseFromString(doc.documentElement.textContent, 'text/html')
-        return docEnsure.documentElement.textContent
-      }
-  
-  })
+    if (list.length) {
+      this.list.classList.add('show-search-box')
+      await this.virtualList.render({
+        displayAmt: 5,
+        listItems: list,
+        tag: 'search-row'
+      })
+    } else {
+      this.list.classList.remove('show-search-box')
+    }
+  }
+
+  selection(event) {
+    if (Object.values(this.KEY_CODE).indexOf(event.keyCode) === -1) return
+    if (event.keyCode === this.KEY_CODE.ENTER) {
+      this.virtualList.triggerSelected()
+      this.searchSelected()
+    }
+    if (event.keyCode === this.KEY_CODE.DOWN) {
+      this.virtualList.vItemDown()
+    }
+    if (event.keyCode === this.KEY_CODE.UP) {
+      this.virtualList.vItemUp()
+    }
+  }
+
+  searchSelected() {
+    this.dispatchEvent(new CustomEvent('search-selected', { detail: this.search.value }))
+  }
+
+  finish() {
+    setTimeout(() => {
+      this.list.classList.remove('show-search-box')
+    }, 200)
+  }
+
+  removeHTML(input) {
+    const doc = new DOMParser().parseFromString(input, 'text/html')
+    const docEnsure = new DOMParser().parseFromString(doc.documentElement.textContent, 'text/html')
+    return docEnsure.documentElement.textContent
+  }
+
+})
