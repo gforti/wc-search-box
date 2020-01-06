@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Web Component Search Box demo</title>
+  <style type="text/css">
+   
+    search-row {
+        padding: 0.1rem;
+        border-bottom: 1px solid #eeeeee;
+    }
+  virtual-list .v-item.selected {
+        background-color: #eee;
+    }
+
+  </style>
+</head>
+
+<body>
+    <div class="search-box-wrapper">
+        <search-box data-automation-id="home-search-box" data-placeholder="Search by ID..."></search-box>
+    </div>
+
+
+    <script type="module" src="./search-row.js"></script>
+    <script type="module" src="./virtual-list.js"></script>
+    <script type="module" src="./search-box.js"></script>
+  
+  
+
+  <script>
+
+    function customElementsDefined() {
+        const undefinedElements = document.querySelectorAll(':not(:defined)')
+        return Promise.all([...undefinedElements].map(
+            elem => window.customElements.whenDefined(elem.localName)
+        ))
+    }
+
+    let searchBox
+    let searchItems = {}
+    const payload = [
+        {ID: 1, NameHash: 'one'},
+        {ID: 2, NameHash: 'two'},
+        {ID: 3, NameHash: 'three'},
+        {ID: 4, NameHash: 'four'},
+        {ID: 5, NameHash: 'five'},
+        {ID: 6, NameHash: 'six'},
+        {ID: 7, NameHash: 'seven'},
+        {ID: 8, NameHash: 'eight'},
+        {ID: 9, NameHash: 'nine'},
+        {ID: 99, NameHash: 'ninenine'},
+    ]
+
+    async function startApp() {
+        await customElementsDefined()
+        searchBox = document.querySelector('search-box')
+        if (searchBox) {
+            searchBox.addEventListener('search-selected', (evt) => {
+                console.log('search selected', evt.detail, searchItems[evt.detail])
+                //searchBox.finish()
+            })
+            setTimeout(() => {
+                handleSearchPayload(payload)
+            }, 1000)
+            
+        }
+        
+    }
+
+    function handleSearchPayload(payload) {
+        payload.forEach(item => searchItems[item.ID] = item.NameHash)
+        if (searchBox) {
+            searchBox.setSearchList(Object.keys(searchItems))
+        }
+    }
+
+    startApp()
+  </script>
+
+</body>
+
+</html>
